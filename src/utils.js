@@ -11,6 +11,10 @@ export const now = () =>
 
 export const today = () => now().slice(0, 10)
 
+// A Date object as local "YYYY-MM-DD" (toISOString alone would use UTC and can show the wrong day).
+export const localDate = (d) =>
+  new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10)
+
 // SHA-256 hash for passwords (demo only: real systems hash on the server).
 export async function hash(text) {
   try {

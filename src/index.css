@@ -80,6 +80,17 @@ button.pri:hover {
   border-color: var(--ac)
 }
 
+button.bt1{
+  background: var(--ok);
+  color: var(--ai);
+  border-color: var(--ok)
+}
+button.bt1:hover {
+  background: var(--az);
+  color: var(--ab);
+  border-color: var(--ac)
+}
+
 button.dg {
   color: var(--bad)
 }

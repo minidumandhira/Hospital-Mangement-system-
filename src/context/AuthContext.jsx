@@ -1,13 +1,13 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { useData } from './DataContext'
-import { ACCESS } from '../config/roles'
-import { hash } from '../utils'
+import { ACCESS, PORTAL_SCREENS } from '../config/roles'
+import { hash, newId } from '../utils'
 
 const AuthContext = createContext(null)
 const IDLE_MS = 15 * 60 * 1000 // automatic session timeout
 
 export function AuthProvider({ children }) {
-  const { db, audit, actorRef } = useData()
+  const { db, add, audit, actorRef } = useData()
   const [uid, setUid] = useState(() => sessionStorage.getItem('hms-uid'))
   const [notice, setNotice] = useState('')
   const user = db.users.find((u) => u.id === uid) || null
@@ -36,6 +36,23 @@ export function AuthProvider({ children }) {
     return ''
   }
 
+  // Patients create their own account. This makes a patient record and a login linked to it.
+  // Returns an error message, or '' on success.
+  const register = async ({ name, dob, phone, username, password }) => {
+    const uname = username.trim().toLowerCase()
+    if (db.users.some((u) => u.username === uname)) return 'That username is taken. Choose another.'
+    if (password.length < 6) return 'Use a password of at least 6 characters.'
+    const patientId = newId()
+    const userId = newId()
+    actorRef.current = uname
+    add('patients', { id: patientId, name: name.trim(), dob, gender: '', phone, blood: '', address: '', allergies: '' }, 'Patient registered online')
+    add('users', { id: userId, username: uname, name: name.trim(), role: 'patient', patient: patientId, pw: await hash(password) }, 'Patient account created')
+    sessionStorage.setItem('hms-uid', userId)
+    setNotice('')
+    setUid(userId)
+    return ''
+  }
+
   // Sign out after 15 minutes without activity.
   useEffect(() => {
     if (!user) return
@@ -53,10 +70,14 @@ export function AuthProvider({ children }) {
     }
   }, [user, logout])
 
-  const can = (key) => !!user && (ACCESS[user.role] === 'all' || ACCESS[user.role].includes(key))
+  const can = (key) => {
+    if (!user) return false
+    if (PORTAL_SCREENS.includes(key)) return user.role === 'patient'
+    return ACCESS[user.role] === 'all' || ACCESS[user.role].includes(key)
+  }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, can, notice }}>
+    <AuthContext.Provider value={{ user, login, register, logout, can, notice }}>
       {children}
     </AuthContext.Provider>
   )

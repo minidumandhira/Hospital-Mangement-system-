@@ -10,6 +10,11 @@ const EMPTY = {
   labs: [], meds: [], adm: [], bills: [], staff: [], att: [], leaves: [], audit: [],
 }
 
+// A demo patient login (patient / patient123) linked to a patient record.
+async function demoPatientUser(patient) {
+  return { id: newId(), username: 'patient', name: patient.name, role: 'patient', patient: patient.id, pw: await hash('patient123') }
+}
+
 async function seed() {
   const users = []
   const accounts = [
@@ -24,15 +29,17 @@ async function seed() {
   for (const [username, name, role] of accounts) {
     users.push({ id: newId(), username, name, role, pw: await hash(username + '123') })
   }
+  const patients = [
+    { id: newId(), name: 'Nimali Fernando', dob: '1988-04-12', gender: 'Female', phone: '0771234567', blood: 'O+', address: 'Matara', allergies: 'Penicillin' },
+    { id: newId(), name: 'Kasun Silva', dob: '1975-09-30', gender: 'Male', phone: '0712345678', blood: 'A+', address: 'Galle', allergies: '' },
+  ]
+  users.push(await demoPatientUser(patients[0]))
   return {
     ...EMPTY,
     users,
     depts: ['General Medicine', 'Pediatrics', 'Cardiology', 'Orthopedics', 'Gynecology', 'Laboratory', 'Pharmacy', 'Nursing', 'Administration']
       .map((name) => ({ id: newId(), name })),
-    patients: [
-      { id: newId(), name: 'Nimali Fernando', dob: '1988-04-12', gender: 'Female', phone: '0771234567', blood: 'O+', address: 'Matara', allergies: 'Penicillin' },
-      { id: newId(), name: 'Kasun Silva', dob: '1975-09-30', gender: 'Male', phone: '0712345678', blood: 'A+', address: 'Galle', allergies: '' },
-    ],
+    patients,
     doctors: [
       { id: newId(), name: 'Dr. Amara Perera', dept: 'General Medicine', phone: '0112223344', fee: 2500, days: 'Mon–Fri', hours: '09:00–13:00' },
       { id: newId(), name: 'Dr. Ruwan Jayasuriya', dept: 'Cardiology', phone: '0112223355', fee: 4000, days: 'Tue, Thu', hours: '14:00–18:00' },
@@ -43,7 +50,14 @@ async function seed() {
 async function load() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORE_KEY))
-    if (saved && saved.users) return { ...EMPTY, ...saved }
+    if (saved && saved.users) {
+      const data = { ...EMPTY, ...saved }
+      // Older saved data has no patient login yet: add the demo one.
+      if (!data.users.some((u) => u.role === 'patient') && data.patients[0]) {
+        data.users = [...data.users, await demoPatientUser(data.patients[0])]
+      }
+      return data
+    }
   } catch { /* fall through to seed */ }
   return seed()
 }

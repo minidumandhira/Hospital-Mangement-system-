@@ -5,12 +5,15 @@ import Layout from './components/Layout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import ModulePage from './pages/ModulePage'
+import MyAppointments from './pages/MyAppointments'
+import MyRecord from './pages/MyRecord'
+import './step2.css'
 
 // Blocks screens the signed-in role may not open.
 function Guard({ screen, children }) {
   const { user, can } = useAuth()
   if (!user) return <Navigate to="/login" replace />
-  if (!can(screen)) return <Navigate to="/" replace />
+  if (screen && !can(screen)) return <Navigate to="/" replace />
   return children
 }
 
@@ -18,12 +21,15 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route element={<Guard screen="dash"><Layout /></Guard>}>
+      <Route element={<Guard><Layout /></Guard>}>
         <Route index element={<Dashboard />} />
         {/* One route per module in config/modules.js */}
         {Object.keys(MODULES).map((key) => (
           <Route key={key} path={key} element={<Guard screen={key}><ModulePage moduleKey={key} /></Guard>} />
         ))}
+        {/* Patient portal */}
+        <Route path="my" element={<Guard screen="my"><MyAppointments /></Guard>} />
+        <Route path="myrecord" element={<Guard screen="myrecord"><MyRecord /></Guard>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

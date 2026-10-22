@@ -7,7 +7,10 @@ export default function RecordForm({ module, record, onSave, onCancel }) {
   const { db } = useData()
   const [values, setValues] = useState(() => {
     const start = {}
-    module.fields.forEach((f) => (start[f.key] = record?.[f.key] ?? ''))
+    module.fields.forEach((f) => {
+      const first = typeof f.default === 'function' ? f.default() : f.default
+      start[f.key] = record?.[f.key] ?? first ?? ''
+    })
     return start
   })
   const [error, setError] = useState('')
@@ -30,7 +33,7 @@ export default function RecordForm({ module, record, onSave, onCancel }) {
     <form onSubmit={submit}>
       <div className="fg">
         {module.fields.map((f) => (
-          <label key={f.key}>
+          <label key={f.key} className={f.type === 'textarea' ? 'wide' : undefined}>
             {f.label}
             {f.type === 'select' ? (
               <select value={values[f.key]} required={f.required} onChange={(e) => set(f.key, e.target.value)}>

@@ -9,8 +9,7 @@ import Prescriptions from './pages/Prescriptions'
 import Billing from './pages/Billing'
 import MyAppointments from './pages/MyAppointments'
 import MyRecord from './pages/MyRecord'
-import './step2.css'
-import './step3.css'
+
 
 // Blocks screens the signed-in role may not open.
 function Guard({ screen, children }) {

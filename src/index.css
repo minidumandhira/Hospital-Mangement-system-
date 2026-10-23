@@ -421,3 +421,36 @@ tr:last-child td {
     padding: 14px
   }
 }
+
+/* ===== Status badges ===== */
+.b{padding:1px 8px;border-radius:99px;font-size:12px;border:1px solid currentColor;white-space:nowrap}
+.s-Completed,.s-Approved,.s-Paid{color:var(--ok)}
+.s-Cancelled,.s-Rejected,.s-Unpaid{color:var(--bad)}
+.s-Scheduled,.s-Requested,.s-Pending,.s-Partial{color:var(--wn)}
+.s-Checkedin,.s-Admitted,.s-Samplecollected{color:var(--ac)}
+.s-Discharged{color:var(--mu)}
+
+/* ===== Wide form fields (text areas) ===== */
+.wide{grid-column:1/-1}
+
+/* ===== Weekly calendar ===== */
+.cal-head{margin-bottom:12px}
+.grid7{display:grid;grid-template-columns:repeat(7,minmax(130px,1fr));gap:8px;overflow-x:auto}
+.day{background:var(--p);border:1px solid var(--ln);border-radius:8px;padding:8px;min-height:120px}
+.day.now{border:2px solid var(--ac)}
+.day h4{margin:0 0 4px}
+.ev{display:flex;flex-direction:column;align-items:flex-start;width:100%;text-align:left;margin:5px 0;padding:3px 6px;border:0;border-left:3px solid var(--ac);border-radius:0;background:var(--bg)}
+.ev small{color:var(--mu)}
+
+/* ===== Lists inside pages and dialogs ===== */
+main ul,.box ul{margin:0;padding-left:18px}
+main li,.box li{margin-bottom:6px}
+
+/* ===== Printing (lab report, invoice): show only the open dialog ===== */
+@media print{
+  body *{visibility:hidden}
+  .box,.box *{visibility:visible}
+  .overlay{position:absolute;inset:auto;left:0;top:0;background:none;padding:0;display:block}
+  .box{width:100%;max-height:none;overflow:visible}
+  .np{display:none!important}
+}

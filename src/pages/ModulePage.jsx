@@ -17,6 +17,7 @@ export default function ModulePage({ moduleKey }) {
   const [editing, setEditing] = useState(null) // null = closed, {} = new, record = edit
   const [deleting, setDeleting] = useState(null)
   const [viewing, setViewing] = useState(null) // record shown in the module's viewer
+  const [acting, setActing] = useState(null) // { action, row } while an action's small form is open
   const [calendar, setCalendar] = useState(false)
   const [status, setStatus] = useState('')
 
@@ -50,7 +51,11 @@ export default function ModulePage({ moduleKey }) {
   const actions = (row) =>
     (module.rowActions?.(row, { update, db }) || []).map((a) => ({
       label: a.label,
-      onClick: () => (a.view ? setViewing(row) : (a.run(row), tell('Done.'))),
+      onClick: () => {
+        if (a.view) setViewing(row)
+        else if (a.form) setActing({ action: a, row })
+        else { a.run(); tell('Done.') }
+      },
     }))
 
   const showCalendar = module.calendar && calendar
@@ -105,11 +110,22 @@ export default function ModulePage({ moduleKey }) {
       )}
 
       {viewing && Viewer && (
-        <Modal title={viewing.name || module.title} onClose={() => setViewing(null)}>
+        <Modal title={module.viewerTitle?.(viewing) ?? viewing.name ?? module.title} onClose={() => setViewing(null)}>
           <Viewer record={viewing} />
-          <div className="row" style={{ marginTop: 14 }}>
+          <div className="row np" style={{ marginTop: 14 }}>
             <button onClick={() => setViewing(null)}>Close</button>
           </div>
+        </Modal>
+      )}
+
+      {acting && (
+        <Modal title={acting.action.label} onClose={() => setActing(null)}>
+          <RecordForm
+            module={acting.action.form}
+            record={null}
+            onSave={(values) => { acting.action.run(values); setActing(null); tell('Done.') }}
+            onCancel={() => setActing(null)}
+          />
         </Modal>
       )}
 

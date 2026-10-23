@@ -11,15 +11,18 @@
 //   extra        computed columns: [{ key, label, value: (row) => text }]
 //   validate     (values, existingRecord, db) => error message, or '' to allow the save
 //   rowActions   (row, { update, db }) => [{ label, run?, view? }] extra buttons per row
-//   viewer       a component opened by an action with view: true
+//   viewer       a component opened by an action with view: true (title from viewerTitle(row))
+//   form actions { label, form: { fields }, run(values) } open a small form first
 //   sort         comparator for the rows (default: newest added first)
 //   editLabel    wording for the Edit button, e.g. 'Reschedule'
 //   calendar     true = show the List / Calendar toggle
 
 import PatientHistory from '../components/PatientHistory'
-import { today } from '../utils'
+import { today, stockAlerts } from '../utils'
+import LabReport from '../components/LabReport'
 
 const patientOptions = (db) => [['', 'Select patient'], ...db.patients.map((p) => [p.id, p.name])]
+const medOptions = (db) => [['', 'None'], ...db.meds.map((m) => [m.id, m.name])]
 const doctorOptions = (db) => [['', 'Select doctor'], ...db.doctors.map((d) => [d.id, d.name])]
 
 export const MODULES = {
@@ -92,11 +95,86 @@ export const MODULES = {
       { key: 'date', label: 'Date', type: 'date', required: true, default: today },
       { key: 'diagnosis', label: 'Diagnosis', required: true },
       { key: 'treatment', label: 'Treatment', type: 'textarea' },
-      { key: 'prescription', label: 'Prescription (medicine, dose, duration)', type: 'textarea' },
+      { key: 'med', label: 'Prescribed medicine (from stock)', type: 'select', options: medOptions },
+      { key: 'qty', label: 'Quantity', type: 'number' },
+      { key: 'dosage', label: 'Dosage instructions' },
+      { key: 'prescription', label: 'Prescription notes', type: 'textarea' },
       { key: 'report', label: 'Medical report', type: 'textarea' },
     ],
     columns: ['date', 'patient', 'doctor', 'diagnosis'],
     sort: (a, b) => (a.date < b.date ? 1 : -1), // latest first
+    validate: (v, record) => {
+      if (v.med && !(v.qty > 0)) return 'Enter a quantity for the prescribed medicine.'
+      // Once the pharmacy has dispensed it, the medicine and quantity are fixed.
+      if (record?.disp && (v.med !== record.med || v.qty !== record.qty))
+        return 'This prescription was already dispensed, so the medicine and quantity cannot change.'
+      return ''
+    },
+  },
+
+  labs: {
+    title: 'Laboratory',
+    noun: 'test request',
+    fields: [
+      { key: 'patient', label: 'Patient', type: 'select', options: patientOptions, required: true },
+      { key: 'doctor', label: 'Requested by', type: 'select', options: doctorOptions },
+      { key: 'test', label: 'Test', required: true },
+      { key: 'price', label: 'Charge (Rs)', type: 'number', money: true },
+      { key: 'date', label: 'Requested on', type: 'date', default: today },
+      {
+        key: 'status',
+        label: 'Status',
+        type: 'select',
+        options: ['Requested', 'Sample collected', 'Completed'],
+        default: 'Requested',
+      },
+      { key: 'result', label: 'Result', type: 'textarea' },
+    ],
+    columns: ['date', 'patient', 'test', 'status'],
+    sort: (a, b) => (a.date < b.date ? 1 : -1),
+    validate: (v) => (v.status === 'Completed' && !v.result ? 'Enter the result before marking the test Completed.' : ''),
+    viewer: LabReport,
+    viewerTitle: () => 'Laboratory report',
+    // Workflow: Requested -> Sample collected -> Completed (result entered) -> printable report.
+    rowActions: (r, { update }) => {
+      if (r.status === 'Requested')
+        return [{ label: 'Collect sample', run: () => update('labs', r.id, { status: 'Sample collected' }, 'Lab sample collected') }]
+      if (r.status === 'Sample collected')
+        return [{
+          label: 'Enter result',
+          form: { fields: [{ key: 'result', label: 'Result', type: 'textarea', required: true }] },
+          run: (v) => update('labs', r.id, { status: 'Completed', result: v.result }, 'Lab result entered'),
+        }]
+      return [{ label: 'Report', view: true }]
+    },
+  },
+
+  meds: {
+    title: 'Pharmacy stock',
+    noun: 'medicine',
+    fields: [
+      { key: 'name', label: 'Medicine', required: true },
+      { key: 'batch', label: 'Batch' },
+      { key: 'stock', label: 'Stock', type: 'number', required: true },
+      { key: 'reorder', label: 'Reorder level', type: 'number' },
+      { key: 'price', label: 'Unit price (Rs)', type: 'number', money: true },
+      { key: 'expiry', label: 'Expiry date', type: 'date' },
+    ],
+    columns: ['name', 'batch', 'stock', 'price', 'expiry', 'alerts'],
+    extra: [{ key: 'alerts', label: 'Alerts', value: (m) => stockAlerts(m).join(', ') }],
+    sort: (a, b) => (a.name < b.name ? -1 : 1),
+    rowActions: (m, { update }) => [{
+      label: 'Restock',
+      form: {
+        fields: [
+          { key: 'qty', label: 'Quantity received', type: 'number', required: true },
+          { key: 'expiry', label: 'New expiry date (optional)', type: 'date' },
+        ],
+      },
+      run: (v) => update('meds', m.id,
+        { stock: Number(m.stock) + v.qty, ...(v.expiry ? { expiry: v.expiry } : {}) },
+        'Restocked ' + m.name),
+    }],
   },
 
   adm: {
@@ -148,7 +226,11 @@ export const MODULES = {
 // Sidebar entries are built from the modules, plus the dashboard.
 export const NAV = [
   { key: 'dash', label: 'Dashboard', to: '/' },
-  ...Object.entries(MODULES).map(([key, m]) => ({ key, label: m.title, to: '/' + key })),
+  ...Object.entries(MODULES).flatMap(([key, m]) => {
+    const item = { key, label: m.title, to: '/' + key }
+    // The prescription queue is a custom page that sits right after Pharmacy stock.
+    return key === 'meds' ? [item, { key: 'rx', label: 'Prescriptions', to: '/rx' }] : [item]
+  }),
   // Patient portal
   { key: 'my', label: 'My appointments', to: '/my' },
   { key: 'myrecord', label: 'My health record', to: '/myrecord' },

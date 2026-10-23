@@ -1,0 +1,11 @@
+/* Added in step 3: lab status colour, printing. Keep index.css as it is. */
+.s-Samplecollected{color:var(--ac)}
+
+/* Printing a lab report: show only the open dialog. */
+@media print{
+  body *{visibility:hidden}
+  .box,.box *{visibility:visible}
+  .overlay{position:absolute;inset:auto;left:0;top:0;background:none;padding:0;display:block}
+  .box{width:100%;max-height:none;overflow:visible}
+  .np{display:none!important}
+}

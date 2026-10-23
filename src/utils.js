@@ -36,3 +36,13 @@ export function labelOf(field, value, db) {
   const hit = optionsOf(field, db).find(([v]) => v === value)
   return hit ? hit[1] : value
 }
+
+// Pharmacy warnings for one medicine: low stock, expired, or expiring within 60 days.
+export function stockAlerts(med) {
+  const alerts = []
+  if (Number(med.stock) <= Number(med.reorder || 0)) alerts.push('Low stock')
+  const soon = localDate(new Date(Date.now() + 60 * 864e5))
+  if (med.expiry && med.expiry < today()) alerts.push('Expired')
+  else if (med.expiry && med.expiry <= soon) alerts.push('Expires soon')
+  return alerts
+}

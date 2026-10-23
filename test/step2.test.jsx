@@ -55,7 +55,7 @@ test('book, block double-booking, track status, calendar, history, discharge', a
   await user.selectOptions(within(dlg).getByLabelText('Patient'), 'Nimali Fernando')
   await user.selectOptions(within(dlg).getByLabelText('Doctor'), 'Dr. Amara Perera')
   await user.type(within(dlg).getByLabelText('Diagnosis'), 'Viral fever')
-  await user.type(within(dlg).getByLabelText(/Prescription/), 'Paracetamol 500 mg')
+  await user.type(within(dlg).getByLabelText(/Prescription notes/), 'Paracetamol 500 mg')
   await user.click(within(dlg).getByRole('button', { name: 'Save' }))
   await screen.findByText('Viral fever')
 

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
-import { newId, now, hash } from '../utils'
+import { newId, now, hash, localDate } from '../utils'
 
 const STORE_KEY = 'hms-react-v1'
 const DataContext = createContext(null)
@@ -9,6 +9,14 @@ const EMPTY = {
   users: [], depts: [], patients: [], doctors: [], appts: [], records: [],
   labs: [], meds: [], adm: [], bills: [], staff: [], att: [], leaves: [], audit: [],
 }
+
+// Starting stock. Amoxicillin is low and close to expiry, so the alerts have something to show.
+const inDays = (n) => localDate(new Date(Date.now() + n * 864e5))
+const sampleMeds = () => [
+  { id: newId(), name: 'Paracetamol 500 mg', batch: 'PC-2291', stock: 400, reorder: 100, price: 5, expiry: inDays(400) },
+  { id: newId(), name: 'Amoxicillin 250 mg', batch: 'AM-1180', stock: 40, reorder: 60, price: 22, expiry: inDays(30) },
+  { id: newId(), name: 'Atorvastatin 20 mg', batch: 'AT-7710', stock: 150, reorder: 50, price: 35, expiry: inDays(300) },
+]
 
 // A demo patient login (patient / patient123) linked to a patient record.
 async function demoPatientUser(patient) {
@@ -40,6 +48,8 @@ async function seed() {
     depts: ['General Medicine', 'Pediatrics', 'Cardiology', 'Orthopedics', 'Gynecology', 'Laboratory', 'Pharmacy', 'Nursing', 'Administration']
       .map((name) => ({ id: newId(), name })),
     patients,
+    meds: sampleMeds(),
+    medsSeeded: true,
     doctors: [
       { id: newId(), name: 'Dr. Amara Perera', dept: 'General Medicine', phone: '0112223344', fee: 2500, days: 'Mon–Fri', hours: '09:00–13:00' },
       { id: newId(), name: 'Dr. Ruwan Jayasuriya', dept: 'Cardiology', phone: '0112223355', fee: 4000, days: 'Tue, Thu', hours: '14:00–18:00' },
@@ -55,6 +65,11 @@ async function load() {
       // Older saved data has no patient login yet: add the demo one.
       if (!data.users.some((u) => u.role === 'patient') && data.patients[0]) {
         data.users = [...data.users, await demoPatientUser(data.patients[0])]
+      }
+      // Older saved data has no medicines yet: add the starting stock once.
+      if (!data.medsSeeded) {
+        data.medsSeeded = true
+        if (!data.meds.length) data.meds = sampleMeds()
       }
       return data
     }

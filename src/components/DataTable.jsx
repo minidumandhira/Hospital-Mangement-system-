@@ -37,7 +37,15 @@ export default function DataTable({ module, rows, onEdit, onDelete, actions }) {
                 const text = cellText(module, row, c, db)
                 return (
                   <td key={c}>
-                    {c === 'status' && text ? <span className={'b s-' + text.replace(/\W/g, '')}>{text}</span> : text}
+                    {c === 'status' && text ? (
+                      <span className={'b s-' + text.replace(/\W/g, '')}>{text}</span>
+                    ) : c === 'alerts' ? (
+                      text
+                        ? text.split(', ').map((t) => (
+                            <span key={t} className={'b ' + (t === 'Expired' ? 's-Cancelled' : 's-Pending')}>{t}</span>
+                          ))
+                        : <span className="mu">OK</span>
+                    ) : text}
                   </td>
                 )
               })}

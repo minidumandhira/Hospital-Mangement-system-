@@ -1,10 +1,10 @@
 import { Link, Navigate } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
-import { today } from '../utils'
+import { today, stockAlerts } from '../utils'
 
 // Readout strip and today's schedule.
-// Later steps add: revenue, lab requests and pharmacy alerts.
+// Later step adds: revenue collected.
 export default function Dashboard() {
   const { db } = useData()
   const { user, can } = useAuth()
@@ -14,12 +14,15 @@ export default function Dashboard() {
   const todays = db.appts
     .filter((a) => a.when.slice(0, 10) === today() && a.status !== 'Cancelled')
     .sort((a, b) => (a.when < b.when ? -1 : 1))
+  const alerts = db.meds.flatMap((m) => stockAlerts(m).map((a) => `${m.name} — ${a}`))
   const nameOf = (list, id) => list.find((x) => x.id === id)?.name ?? '—'
 
   const tiles = [
     { key: 'patients', label: 'Total patients', value: db.patients.length },
     { key: 'appts', label: "Today's appointments", value: todays.length },
     { key: 'adm', label: 'Currently admitted', value: db.adm.filter((a) => !a.out).length },
+    { key: 'labs', label: 'Open lab requests', value: db.labs.filter((l) => l.status !== 'Completed').length },
+    { key: 'meds', label: 'Pharmacy alerts', value: alerts.length },
     { key: 'doctors', label: 'Doctors', value: db.doctors.length },
   ].filter((t) => can(t.key))
 
@@ -50,6 +53,17 @@ export default function Dashboard() {
             </ul>
           ) : (
             <p className="mu">No appointments today.</p>
+          )}
+        </>
+      )}
+
+      {can('meds') && (
+        <>
+          <h3>Pharmacy alerts</h3>
+          {alerts.length ? (
+            <ul>{alerts.map((a) => <li key={a}>{a}</li>)}</ul>
+          ) : (
+            <p className="mu">Stock levels and expiry dates are fine.</p>
           )}
         </>
       )}

@@ -8,6 +8,8 @@ export default function PatientHistory({ record: patient }) {
   const records = db.records.filter((r) => r.patient === patient.id).sort((a, b) => (a.date < b.date ? 1 : -1))
   const appts = db.appts.filter((a) => a.patient === patient.id).sort((a, b) => (a.when < b.when ? 1 : -1))
   const stays = db.adm.filter((a) => a.patient === patient.id)
+  const tests = db.labs.filter((l) => l.patient === patient.id).sort((a, b) => (a.date < b.date ? 1 : -1))
+  const medName = (id) => db.meds.find((m) => m.id === id)?.name ?? 'medicine removed'
 
   // A heading with a list, or "None recorded." when the list is empty.
   const section = (title, items) => (
@@ -30,6 +32,11 @@ export default function PatientHistory({ record: patient }) {
           <li key={r.id}>
             {r.date}: <b>{r.diagnosis}</b> ({doctor(r.doctor)})
             {r.treatment && <div className="mu">Treatment: {r.treatment}</div>}
+            {r.med && (
+              <div className="mu">
+                Medicine: {medName(r.med)} × {r.qty}{r.dosage && ` (${r.dosage})`}{r.disp && ` · dispensed ${r.disp}`}
+              </div>
+            )}
             {r.prescription && <div className="mu">Prescription: {r.prescription}</div>}
             {r.report && <div className="mu">Report: {r.report}</div>}
           </li>
@@ -40,6 +47,15 @@ export default function PatientHistory({ record: patient }) {
         appts.map((a) => (
           <li key={a.id}>
             {a.when.replace('T', ' ')} with {doctor(a.doctor)} <span className={'b s-' + a.status.replace(/\W/g, '')}>{a.status}</span>
+          </li>
+        )),
+      )}
+      {section(
+        'Laboratory tests',
+        tests.map((l) => (
+          <li key={l.id}>
+            {l.date}: <b>{l.test}</b> <span className={'b s-' + l.status.replace(/\W/g, '')}>{l.status}</span>
+            {l.result && <div className="mu">Result: {l.result}</div>}
           </li>
         )),
       )}

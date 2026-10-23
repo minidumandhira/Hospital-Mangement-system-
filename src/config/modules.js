@@ -1,21 +1,4 @@
-// One entry per data screen. DataTable and RecordForm read this config,
-// so adding a simple module means adding one block here.
-//
-// field: { key, label, type?, options?, required?, money?, default? }
-//   type: 'text' (default) | 'number' | 'date' | 'datetime-local' | 'select' | 'textarea'
-//   options: a list, or a function (db) => list. Items are 'text' or [value, label].
-//   default: starting value for new records (a value or a function).
-//
-// Optional module settings:
-//   columns      field keys shown in the table
-//   extra        computed columns: [{ key, label, value: (row) => text }]
-//   validate     (values, existingRecord, db) => error message, or '' to allow the save
-//   rowActions   (row, { update, db }) => [{ label, run?, view? }] extra buttons per row
-//   viewer       a component opened by an action with view: true (title from viewerTitle(row))
-//   form actions { label, form: { fields }, run(values) } open a small form first
-//   sort         comparator for the rows (default: newest added first)
-//   editLabel    wording for the Edit button, e.g. 'Reschedule'
-//   calendar     true = show the List / Calendar toggle
+
 
 import PatientHistory from '../components/PatientHistory'
 import { today, stockAlerts } from '../utils'
@@ -223,13 +206,18 @@ export const MODULES = {
   },
 }
 
-// Sidebar entries are built from the modules, plus the dashboard.
+// Pages that are not simple data tables. Each sits in the menu right after a related module.
+const CUSTOM_PAGES = {
+  meds: { key: 'rx', label: 'Prescriptions', to: '/rx' },
+  adm: { key: 'bills', label: 'Billing', to: '/bills' },
+}
+
+// Sidebar entries are built from the modules, plus the dashboard and the custom pages.
 export const NAV = [
   { key: 'dash', label: 'Dashboard', to: '/' },
   ...Object.entries(MODULES).flatMap(([key, m]) => {
     const item = { key, label: m.title, to: '/' + key }
-    // The prescription queue is a custom page that sits right after Pharmacy stock.
-    return key === 'meds' ? [item, { key: 'rx', label: 'Prescriptions', to: '/rx' }] : [item]
+    return CUSTOM_PAGES[key] ? [item, CUSTOM_PAGES[key]] : [item]
   }),
   // Patient portal
   { key: 'my', label: 'My appointments', to: '/my' },

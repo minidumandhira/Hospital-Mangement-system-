@@ -6,6 +6,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import ModulePage from './pages/ModulePage'
 import Prescriptions from './pages/Prescriptions'
+import Billing from './pages/Billing'
 import MyAppointments from './pages/MyAppointments'
 import MyRecord from './pages/MyRecord'
 import './step2.css'
@@ -29,6 +30,7 @@ export default function App() {
         {Object.keys(MODULES).map((key) => (
           <Route key={key} path={key} element={<Guard screen={key}><ModulePage moduleKey={key} /></Guard>} />
         ))}
+        <Route path="bills" element={<Guard screen="bills"><Billing /></Guard>} />
         <Route path="rx" element={<Guard screen="rx"><Prescriptions /></Guard>} />
         {/* Patient portal */}
         <Route path="my" element={<Guard screen="my"><MyAppointments /></Guard>} />

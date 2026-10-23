@@ -2,9 +2,9 @@ import { Link, Navigate } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { today, stockAlerts } from '../utils'
+import { paidOf, balanceOf, rs } from '../config/billing'
 
 // Readout strip and today's schedule.
-// Later step adds: revenue collected.
 export default function Dashboard() {
   const { db } = useData()
   const { user, can } = useAuth()
@@ -23,6 +23,8 @@ export default function Dashboard() {
     { key: 'adm', label: 'Currently admitted', value: db.adm.filter((a) => !a.out).length },
     { key: 'labs', label: 'Open lab requests', value: db.labs.filter((l) => l.status !== 'Completed').length },
     { key: 'meds', label: 'Pharmacy alerts', value: alerts.length },
+    { key: 'bills', label: 'Revenue collected', value: rs(db.bills.reduce((sum, b) => sum + paidOf(b), 0)) },
+    { key: 'bills', label: 'Outstanding', value: rs(db.bills.reduce((sum, b) => sum + balanceOf(b), 0)) },
     { key: 'doctors', label: 'Doctors', value: db.doctors.length },
   ].filter((t) => can(t.key))
 
@@ -32,7 +34,7 @@ export default function Dashboard() {
       {tiles.length ? (
         <section className="mon">
           {tiles.map((t) => (
-            <Link key={t.key} to={'/' + t.key}><span>{t.label}</span><b>{t.value}</b></Link>
+            <Link key={t.label} to={'/' + t.key}><span>{t.label}</span><b>{t.value}</b></Link>
           ))}
         </section>
       ) : (

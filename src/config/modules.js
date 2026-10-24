@@ -1,7 +1,8 @@
 
 
 import PatientHistory from '../components/PatientHistory'
-import { today, stockAlerts } from '../utils'
+import { today, stockAlerts, hash } from '../utils'
+import { ROLES } from './roles'
 import LabReport from '../components/LabReport'
 
 const patientOptions = (db) => [['', 'Select patient'], ...db.patients.map((p) => [p.id, p.name])]
@@ -204,12 +205,89 @@ export const MODULES = {
     fields: [{ key: 'name', label: 'Name', required: true }],
     columns: ['name'],
   },
+
+  staff: {
+    title: 'Staff',
+    noun: 'employee',
+    fields: [
+      { key: 'name', label: 'Name', required: true },
+      { key: 'role', label: 'Job title' },
+      { key: 'dept', label: 'Department', type: 'select', options: (db) => db.depts.map((d) => d.name) },
+      { key: 'phone', label: 'Phone' },
+      { key: 'joined', label: 'Joined on', type: 'date' },
+    ],
+    columns: ['name', 'role', 'dept', 'phone', 'status'],
+    // Attendance is kept on each employee as { 'YYYY-MM-DD': 'Present' | 'Absent' }.
+    extra: [{ key: 'status', label: 'Today', value: (r) => r.att?.[today()] ?? 'Not marked' }],
+    rowActions: (r, { update }) =>
+      ['Present', 'Absent'].map((mark) => ({
+        label: mark,
+        run: () => update('staff', r.id, { att: { ...r.att, [today()]: mark } }, `Attendance: ${r.name} ${mark.toLowerCase()}`),
+      })),
+  },
+
+  leaves: {
+    title: 'Leave',
+    noun: 'leave record',
+    fields: [
+      {
+        key: 'staff',
+        label: 'Employee',
+        type: 'select',
+        required: true,
+        options: (db) => [['', 'Select employee'], ...db.staff.map((s) => [s.id, s.name])],
+      },
+      { key: 'from', label: 'From', type: 'date', required: true },
+      { key: 'to', label: 'To', type: 'date', required: true },
+      { key: 'reason', label: 'Reason' },
+      { key: 'status', label: 'Status', type: 'select', options: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
+    ],
+    columns: ['staff', 'from', 'to', 'status'],
+    sort: (a, b) => (a.from < b.from ? 1 : -1),
+    validate: (v) => (v.to < v.from ? 'The end date is before the start date.' : ''),
+    rowActions: (r, { update }) => {
+      if (r.status !== 'Pending') return []
+      const set = (status, label) => ({ label, run: () => update('leaves', r.id, { status }, `Leave ${status.toLowerCase()}`) })
+      return [set('Approved', 'Approve'), set('Rejected', 'Reject')]
+    },
+  },
+
+  users: {
+    title: 'Users',
+    noun: 'user',
+    fields: [
+      { key: 'username', label: 'Username', required: true },
+      { key: 'name', label: 'Full name', required: true },
+      { key: 'role', label: 'Role', type: 'select', options: ROLES, default: 'doctor', required: true },
+      { key: 'pw', label: 'Password (leave blank to keep)', type: 'password', secret: true },
+    ],
+    columns: ['username', 'name', 'role'],
+    validate: (v, record, db) => {
+      const username = v.username.trim().toLowerCase()
+      if (db.users.some((u) => u.id !== record?.id && u.username === username)) return 'That username is taken.'
+      if (!record && !v.pw) return 'Set a password for the new user.'
+      if (v.pw && v.pw.length < 6) return 'Use a password of at least 6 characters.'
+      if (v.role === 'patient' && record?.role !== 'patient')
+        return 'Patient accounts are created by patients on the sign-in page.'
+      return ''
+    },
+    // Store a hash, never the typed password. A blank password keeps the old one.
+    beforeSave: async (v) => {
+      const out = { ...v, username: v.username.trim().toLowerCase() }
+      if (v.pw) out.pw = await hash(v.pw)
+      else delete out.pw
+      return out
+    },
+    blockDelete: (row, user) => (row.id === user.id ? "You can't delete your own account." : ''),
+  },
 }
 
 // Pages that are not simple data tables. Each sits in the menu right after a related module.
 const CUSTOM_PAGES = {
   meds: { key: 'rx', label: 'Prescriptions', to: '/rx' },
   adm: { key: 'bills', label: 'Billing', to: '/bills' },
+  leaves: { key: 'reports', label: 'Reports', to: '/reports' },
+  users: { key: 'audit', label: 'Audit and backup', to: '/audit' },
 }
 
 // Sidebar entries are built from the modules, plus the dashboard and the custom pages.

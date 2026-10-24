@@ -7,9 +7,10 @@ import Dashboard from './pages/Dashboard'
 import ModulePage from './pages/ModulePage'
 import Prescriptions from './pages/Prescriptions'
 import Billing from './pages/Billing'
+import Reports from './pages/Reports'
+import Audit from './pages/Audit'
 import MyAppointments from './pages/MyAppointments'
 import MyRecord from './pages/MyRecord'
-
 
 // Blocks screens the signed-in role may not open.
 function Guard({ screen, children }) {
@@ -30,6 +31,8 @@ export default function App() {
           <Route key={key} path={key} element={<Guard screen={key}><ModulePage moduleKey={key} /></Guard>} />
         ))}
         <Route path="bills" element={<Guard screen="bills"><Billing /></Guard>} />
+        <Route path="reports" element={<Guard screen="reports"><Reports /></Guard>} />
+        <Route path="audit" element={<Guard screen="audit"><Audit /></Guard>} />
         <Route path="rx" element={<Guard screen="rx"><Prescriptions /></Guard>} />
         {/* Patient portal */}
         <Route path="my" element={<Guard screen="my"><MyAppointments /></Guard>} />

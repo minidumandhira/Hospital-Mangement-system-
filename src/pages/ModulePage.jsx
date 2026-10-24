@@ -34,11 +34,20 @@ export default function ModulePage({ moduleKey }) {
     .sort(module.sort || (() => 1)) // default: newest added first
   if (!module.sort) rows.reverse()
 
-  const save = (values) => {
-    if (editing.id) update(moduleKey, editing.id, values, 'Updated ' + module.noun)
-    else add(moduleKey, values, 'Added ' + module.noun)
+  const save = async (values) => {
+    // Optional last step before saving, e.g. turning a typed password into a hash.
+    const final = module.beforeSave ? await module.beforeSave(values, editing) : values
+    if (editing.id) update(moduleKey, editing.id, final, 'Updated ' + module.noun)
+    else add(moduleKey, final, 'Added ' + module.noun)
     setEditing(null)
     tell('Saved.')
+  }
+
+  // A module can refuse a delete by returning a reason (for example, deleting your own account).
+  const askDelete = (row) => {
+    const reason = module.blockDelete?.(row, user)
+    if (reason) tell(reason)
+    else setDeleting(row)
   }
 
   const confirmDelete = () => {
@@ -90,7 +99,7 @@ export default function ModulePage({ moduleKey }) {
           rows={rows}
           actions={actions}
           onEdit={setEditing}
-          onDelete={user.role === 'admin' ? setDeleting : undefined} // only administrators delete
+          onDelete={user.role === 'admin' ? askDelete : undefined} // only administrators delete
         />
       ) : (
         <p className="empty">

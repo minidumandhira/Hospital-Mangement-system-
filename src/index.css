@@ -424,8 +424,8 @@ tr:last-child td {
 
 /* ===== Status badges ===== */
 .b{padding:1px 8px;border-radius:99px;font-size:12px;border:1px solid currentColor;white-space:nowrap}
-.s-Completed,.s-Approved,.s-Paid{color:var(--ok)}
-.s-Cancelled,.s-Rejected,.s-Unpaid{color:var(--bad)}
+.s-Completed,.s-Approved,.s-Paid,.s-Present{color:var(--ok)}
+.s-Cancelled,.s-Rejected,.s-Unpaid,.s-Absent{color:var(--bad)}
 .s-Scheduled,.s-Requested,.s-Pending,.s-Partial{color:var(--wn)}
 .s-Checkedin,.s-Admitted,.s-Samplecollected{color:var(--ac)}
 .s-Discharged{color:var(--mu)}
@@ -449,8 +449,9 @@ main li,.box li{margin-bottom:6px}
 /* ===== Printing (lab report, invoice): show only the open dialog ===== */
 @media print{
   body *{visibility:hidden}
-  .box,.box *{visibility:visible}
+  .box,.box *,.report,.report *{visibility:visible}
   .overlay{position:absolute;inset:auto;left:0;top:0;background:none;padding:0;display:block}
   .box{width:100%;max-height:none;overflow:visible}
+  .report{position:absolute;left:0;top:0;width:100%}
   .np{display:none!important}
 }

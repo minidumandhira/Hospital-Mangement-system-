@@ -9,7 +9,8 @@ export default function RecordForm({ module, record, onSave, onCancel }) {
     const start = {}
     module.fields.forEach((f) => {
       const first = typeof f.default === 'function' ? f.default() : f.default
-      start[f.key] = record?.[f.key] ?? first ?? ''
+      // A secret field (a password) never shows the stored value.
+      start[f.key] = f.secret ? '' : record?.[f.key] ?? first ?? ''
     })
     return start
   })

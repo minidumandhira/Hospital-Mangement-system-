@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
-import { newId, now, hash, localDate } from '../utils'
+import { newId, now, today, hash, localDate } from '../utils'
+import { readBackup, writeBackup } from '../backup'
 
 const STORE_KEY = 'hms-react-v1'
 const DataContext = createContext(null)
@@ -16,6 +17,12 @@ const sampleMeds = () => [
   { id: newId(), name: 'Paracetamol 500 mg', batch: 'PC-2291', stock: 400, reorder: 100, price: 5, expiry: inDays(400) },
   { id: newId(), name: 'Amoxicillin 250 mg', batch: 'AM-1180', stock: 40, reorder: 60, price: 22, expiry: inDays(30) },
   { id: newId(), name: 'Atorvastatin 20 mg', batch: 'AT-7710', stock: 150, reorder: 50, price: 35, expiry: inDays(300) },
+]
+
+// Starting staff, so the Staff, Leave and attendance screens have people to work with.
+const sampleStaff = () => [
+  { id: newId(), name: 'Nurse Kumari', role: 'Staff nurse', dept: 'Nursing', phone: '0771112233', joined: '2021-03-01' },
+  { id: newId(), name: 'Sunil Wickramasinghe', role: 'Receptionist', dept: 'Administration', phone: '0772223344', joined: '2022-07-15' },
 ]
 
 // A demo patient login (patient / patient123) linked to a patient record.
@@ -50,6 +57,8 @@ async function seed() {
     patients,
     meds: sampleMeds(),
     medsSeeded: true,
+    staff: sampleStaff(),
+    staffSeeded: true,
     doctors: [
       { id: newId(), name: 'Dr. Amara Perera', dept: 'General Medicine', phone: '0112223344', fee: 2500, days: 'Mon–Fri', hours: '09:00–13:00' },
       { id: newId(), name: 'Dr. Ruwan Jayasuriya', dept: 'Cardiology', phone: '0112223355', fee: 4000, days: 'Tue, Thu', hours: '14:00–18:00' },
@@ -71,6 +80,11 @@ async function load() {
         data.medsSeeded = true
         if (!data.meds.length) data.meds = sampleMeds()
       }
+      // Older saved data has no staff yet: add the starting staff once.
+      if (!data.staffSeeded) {
+        data.staffSeeded = true
+        if (!data.staff.length) data.staff = sampleStaff()
+      }
       return data
     }
   } catch { /* fall through to seed */ }
@@ -88,6 +102,13 @@ export function DataProvider({ children }) {
   useEffect(() => {
     if (!db) return
     try { localStorage.setItem(STORE_KEY, JSON.stringify(db)) } catch { /* storage full */ }
+  }, [db])
+
+  // Automatic daily backup: the first time the data is ready each day, keep a copy.
+  useEffect(() => {
+    if (!db) return
+    const last = readBackup()
+    if (!last || last.t.slice(0, 10) !== today()) writeBackup(db)
   }, [db])
 
   const withAudit = (d, text) => ({
@@ -109,10 +130,15 @@ export function DataProvider({ children }) {
     setDb((d) => withAudit({ ...d, [coll]: d[coll].filter((r) => r.id !== id) }, text || 'Deleted from ' + coll))
   }, [])
 
+  // Replace everything with a saved backup.
+  const restore = useCallback((data) => {
+    setDb(() => withAudit({ ...EMPTY, ...data }, 'Backup restored'))
+  }, [])
+
   if (!db) return <p style={{ padding: 24 }}>Loading…</p>
 
   return (
-    <DataContext.Provider value={{ db, add, update, remove, audit, actorRef }}>
+    <DataContext.Provider value={{ db, add, update, remove, restore, audit, actorRef }}>
       {children}
     </DataContext.Provider>
   )
